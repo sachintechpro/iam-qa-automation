@@ -1,0 +1,48 @@
+
+name: IAM QA Automation Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  automation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout QA framework
+        uses: actions/checkout@v4
+
+      - name: Checkout IdentityFlow application
+        uses: actions/checkout@v4
+        with:
+          repository: sachintechpro/identityflow
+          path: identityflow-source
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r iam-qa-automation/requirements.txt
+
+      - name: Run QA automation
+        working-directory: iam-qa-automation
+        env:
+          IDENTITYFLOW_SOURCE: ${{ github.workspace }}/identityflow-source/identityflow
+        run: |
+          mkdir -p reports
+          python -m pytest -v \
+            --html=reports/report.html \
+            --self-contained-html \
+            --junitxml=reports/results.xml
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iam-qa-test-results
+          path: iam-qa-automation/reports/
+          if-no-files-found: warn
