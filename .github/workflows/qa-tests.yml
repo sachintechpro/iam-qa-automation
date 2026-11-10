@@ -31,7 +31,7 @@ jobs:
       - name: Run QA automation
         working-directory: iam-qa-automation
         env:
-          IDENTITYFLOW_SOURCE: ${{ github.workspace }}/identityflow-source/identityflow
+          IAM_APP_PATH: ${{ github.workspace }}/identityflow-source/identityflow
         run: |
           mkdir -p reports
           python -m pytest -v \
