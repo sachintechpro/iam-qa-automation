@@ -1,15 +1,17 @@
-
 name: IAM QA Automation Tests
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   automation:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout QA framework
         uses: actions/checkout@v4
@@ -46,3 +48,46 @@ jobs:
           name: iam-qa-test-results
           path: iam-qa-automation/reports/
           if-no-files-found: warn
+
+  publish-results:
+    name: Publish public test dashboard
+    needs: automation
+    if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: qa-pages-publication
+      cancel-in-progress: false
+    steps:
+      - name: Checkout dashboard generator
+        uses: actions/checkout@v4
+
+      - name: Download automation results
+        uses: actions/download-artifact@v4
+        with:
+          name: iam-qa-test-results
+          path: iam-qa-automation/reports/
+
+      - name: Generate public dashboard
+        run: |
+          python3 tools/build_dashboard.py \
+            --junit iam-qa-automation/reports/results.xml \
+            --out site/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
