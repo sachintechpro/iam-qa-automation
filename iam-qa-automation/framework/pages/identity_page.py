@@ -20,7 +20,7 @@ class IdentityPage:
         return self
 
     def login(self, username, password):
-        Select(self.driver.find_element(By.ID, 'username')).select_by_value(username)
+        Select(self.driver.find_element(By.ID, 'username')).select_by_visible_text(username)
         field = self.driver.find_element(By.ID, 'password')
         field.clear()
         field.send_keys(password)
