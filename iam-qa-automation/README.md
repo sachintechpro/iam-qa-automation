@@ -1,107 +1,128 @@
-# IAM QA Automation Framework
+# Enterprise IAM QA Automation Framework
 
-**Selenium + Python + pytest + Page Object Model + REST API security + data-driven regression + GitHub Actions**
+[![IAM QA Automation Tests](https://github.com/sachintechpro/iam-qa-automation/actions/workflows/qa-tests.yml/badge.svg)](https://github.com/sachintechpro/iam-qa-automation/actions/workflows/qa-tests.yml)
 
-An independent, reusable QA automation showcase. The **application under test (AUT)** is [IdentityFlow](https://github.com/sachintechpro/identityflow), an educational IAM simulator. This repository contains the test framework, not the application.
+**Selenium WebDriver · Python · pytest · Page Object Model · REST API · Data-driven RBAC · Security Regression · HTML/JUnit Reporting · GitHub Actions**
 
-> **Portfolio scope:** Real automated UI and API assertions against IdentityFlow's implemented behavior. This does **not** claim real Okta, OIDC, OAuth, TOTP, or penetration testing coverage. It uses fictional accounts only.
+**[View successful CI run (21/21 passed)](https://github.com/sachintechpro/iam-qa-automation/actions/runs/42775781554)** · **[Live application under test](https://identityflow.onrender.com)** · **[IdentityFlow source](https://github.com/sachintechpro/identityflow)**
 
-## What employers can evaluate
+An independently maintained, automated IAM test framework targeting the fictional **IdentityFlow** authentication simulator. It exercises the application's actual web UI and HTTP endpoints, with a focus on maintainable architecture, reproducible test data, negative security paths and actionable test evidence.
 
-| Engineering skill | Evidence in this repository | Why it matters |
-|---|---|---|
-| Selenium | `tests/ui/test_login.py` | End-to-end browser actions and visible outcomes |
-| Page Object Model | `framework/pages/identity_page.py` | Encapsulated selectors, semantic actions, explicit waits |
-| Python architecture | `framework/api_client.py`, `conftest.py` | Reusable client and fixture separation |
-| pytest | Fixtures, markers, parametrization | Maintainable suite organization and selection |
-| API testing | `tests/api/test_authentication.py` | JSON status/body contracts, cookies, session state |
-| Data-driven tests | `@pytest.mark.parametrize`, `testdata/rbac_cases.json` | RBAC combinations without duplicated code |
-| Security validation | `tests/api/test_authorization.py`, `test_recovery.py` | 401 vs 403, lockouts, replay, MFA gating |
-| Reporting | pytest-html, JUnit XML, failure screenshots | Reproducible CI evidence and triage artifacts |
-| GitHub Actions | `.github/workflows/iam-tests.yml` | Automated execution, cross-repo AUT checkout, downloadable reports |
+> **Verified CI baseline:** 21 tests passed in 17.00 seconds on GitHub Actions run #3 (commit `4d3e4b8`): **19 API tests and 2 headless Selenium UI tests**. The green badge reflects future runs and may change when the code changes. The application under test is a simulator, **not** real Okta, OAuth/OIDC, TOTP or a production identity provider.
 
-## Architecture
+## What to look at first (employer walkthrough)
+
+| Engineering capability | Evidence | Design decision being demonstrated |
+| --- | --- | --- |
+| Selenium WebDriver | [`tests/ui/test_login.py`](iam-qa-automation/tests/ui/test_login.py) | Real Chrome browser journeys for login and authorization; assert actual HTTP outcomes in UI |
+| Page Object Model | [`framework/pages/identity_page.py`](iam-qa-automation/framework/pages/identity_page.py) | One place for selectors, user actions and explicit waits; avoids duplication and hard-coded sleeps |
+| Python / pytest | [`conftest.py`](iam-qa-automation/conftest.py) | Reusable fixtures start an isolated app process per test and clean it up afterward |
+| API regression | [`framework/api_client.py`](iam-qa-automation/framework/api_client.py) | `requests.Session` maintains cookies inside a test, without leaking state between cases |
+| Data-driven testing | [`testdata/rbac_cases.json`](iam-qa-automation/testdata/rbac_cases.json) | RBAC cases are data, not repetitive conditional code |
+| IAM negative tests | [`tests/api/`](iam-qa-automation/tests/api) | Check unauthenticated (401) versus authenticated-but-forbidden (403), reset token reuse, lockouts and MFA gates |
+| Automated evidence | [CI workflow](.github/workflows/qa-tests.yml) | HTML test report and JUnit XML available as downloadable artifacts, even on failures |
+
+## Verified execution
+
+| Layer | Cases | Result |
+| --- | ---: | --- |
+| API tests: authentication, permissions, recovery and MFA | 19 | Passed |
+| Selenium UI: Viewer denied project creation, Editor permitted | 2 | Passed |
+| **Total** | **21** | **Passed** |
+
+**[Inspect the exact green GitHub Actions run](https://github.com/sachintechpro/iam-qa-automation/actions/runs/42775781554)** (the run records the tested commit, logs and archived reports). No security certification or broad penetration-testing claim is implied.
+
+### Download and inspect a test report
+
+1. Open the [successful workflow run](https://github.com/sachintechpro/iam-qa-automation/actions/runs/42775781554).
+2. Scroll to **Artifacts** and download **`iam-qa-test-results`**.
+3. Unzip it. Open `report.html` in a browser to inspect pytest-html results, or load `results.xml` into a JUnit-compatible viewer.
+4. On a failed UI test, inspect captured screenshots if available; these are produced by the failure hook. Reports and screenshots are **CI evidence**, not manually curated success images.
+
+## Framework architecture
 
 ```text
-IAM QA Automation Framework (this repository)
-├── framework/api_client.py      HTTP session and JSON transport
-├── framework/pages/             Selenium Page Objects
-├── conftest.py                  browser/API/server fixtures + evidence capture
-├── testdata/rbac_cases.json     externalized role/endpoint/expected-status matrix
-├── tests/api/                   authentication, RBAC, recovery, MFA
-├── tests/ui/                    real browser login and permission journeys
-└── .github/workflows/           isolated CI test execution and artifacts
-                 │
-                 ▼
-       IdentityFlow (separate GitHub repository)
-       Python IAM API + HTML UI
+GitHub Actions (qa-tests.yml)
+    ├── checkout this test framework
+    ├── checkout IdentityFlow (separate AUT repository)
+    ├── install Python + pytest + Selenium dependencies
+    └── run pytest against isolated local IdentityFlow processes
+               │
+        conftest.py fixtures
+        ├── temporary port + fresh AUT process per test
+        ├── API client with scoped cookie session
+        └── headless Chrome driver + failure screenshot hook
+               │
+          ┌────┴─────┐
+          ▼          ▼
+       API tests   UI tests
+       requests    Selenium WebDriver
+       RBAC data   Page Object Model
+          └────┬─────┘
+               ▼
+       IdentityFlow API + UI
+               │
+               ▼
+         pytest-html / JUnit XML
+         GitHub Actions artifacts
 ```
 
-## Running locally
+The application is **not** hosted by this repository. The test suite starts a fresh local copy of IdentityFlow for each test by default, rather than mutating shared public demo accounts.
 
-Requires Python 3.10+, Chrome, and an extracted/cloned IdentityFlow source checkout. From the automation repository root:
+## Run locally
+
+Requirements: **Python 3.10+**, **Google Chrome**, and Git. The commands below assume both repositories are cloned into sibling folders.
 
 ```bash
+git clone https://github.com/sachintechpro/identityflow.git
+git clone https://github.com/sachintechpro/iam-qa-automation.git
+cd iam-qa-automation/iam-qa-automation
 python -m pip install -r requirements.txt
-# Clone IdentityFlow alongside this repository:
-git clone https://github.com/sachintechpro/identityflow.git ../identityflow
-python -m pytest -v --html=artifacts/report.html --self-contained-html
+IAM_APP_PATH="$(cd ../../identityflow/identityflow && pwd)" python -m pytest -v --html=reports/report.html --self-contained-html --junitxml=reports/results.xml
 ```
 
-By default, **each test starts a fresh temporary IdentityFlow process** on its own localhost port. This isolates lockouts, MFA enrollment, password resets, session cookies, project creation, and audit data. Local-only security tests cannot modify the public demo.
+The command above explicitly points `IAM_APP_PATH` at the checked-out IdentityFlow app directory. This avoids assumptions about sibling-folder layouts. Set `IAM_APP_PATH` separately when running focused suites below, or use the PowerShell example on Windows. Chrome is used headlessly for UI tests.
 
-To override the AUT checkout path:
-
-```bash
-# Linux/macOS example
-IAM_APP_PATH=/absolute/path/to/identityflow/identityflow python -m pytest
-```
-
-Run only the API suite:
+Run focused suites:
 
 ```bash
 python -m pytest -m api -v
-```
-
-Run only Selenium UI tests:
-
-```bash
 python -m pytest -m ui -v
+python -m pytest -m security -v
 ```
 
-Run against a **non-mutating shared demo** (local-only mutation tests automatically skip):
+For Windows PowerShell with a different checkout location:
 
-```bash
-BASE_URL=https://identityflow.onrender.com python -m pytest -m api -v
+```powershell
+$env:IAM_APP_PATH = "C:\path\to\identityflow\identityflow"
+python -m pytest -v
 ```
 
-For a reliable, isolated QA evaluation, run against your local source, not a live public demo (which may have changed state or gone idle).
+## Test-design decisions worth discussing
 
-## Example test reasoning
+**Authorization requires backend assertions.** A hidden or disabled button is not a security boundary. API tests exercise protected endpoints directly and distinguish `401` (no valid session) from `403` (logged in but insufficient privileges).
 
-**Authorization is not a hidden button.** `test_role_permissions` calls protected endpoints directly to prove a Viewer receives `403` while an Admin receives `200`. An unauthenticated user receives `401`.
+**Stateful IAM scenarios need isolation.** Password resets, account lockouts, MFA enrollment and new projects would contaminate subsequent tests if they shared an account. The pytest fixtures start and stop a fresh IdentityFlow process per test case.
 
-**Reset links must resist replay.** `test_reset_token_single_use_and_old_password_revoked` exercises a single-use reset token, rejects reuse, and confirms the old password no longer authenticates.
+**The Page Object owns the browser mechanics.** Selectors and explicit waits live in `IdentityPage`, while test functions read as business journeys. A real CI issue was resolved by changing Selenium from `select_by_value()` to `select_by_visible_text()` to match the AUT's dropdown HTML.
 
-**UI automation must be maintainable.** `IdentityPage` owns selectors and waits. Tests describe user intentions and expected outcomes, avoiding sleeps and duplicated driver commands.
+**Data-driven coverage avoids repetitive test code.** A JSON RBAC matrix separates expected access policies from test execution logic, making permission changes visible in code review.
 
-**Failure evidence matters.** When browser tests fail, a screenshot is saved; JUnit XML and an HTML report are generated on every GitHub Actions run and uploaded even if tests fail.
+**Failed pipelines are useful evidence.** Initial CI runs exposed an incorrect `IAM_APP_PATH` environment variable and then a Selenium selector mismatch. Both were fixed, and [run #3](https://github.com/sachintechpro/iam-qa-automation/actions/runs/42775781554) passed all 21 tests.
 
-## Test execution notes
+## Scope and limitations
 
-- CI checks out this framework and the *separate* IdentityFlow source repository, then runs isolated test servers and headless Chrome.
-- CI is designed for GitHub-hosted Ubuntu runners with Chrome installed.
-- Test fixtures deliberately do not print passwords, cookies, reset tokens, or MFA codes in reports.
-- For future Okta/OIDC testing, add a provider-specific adapter, protected sandbox tenant, token validation tests, redirect/state/nonce assertions, and dedicated environment credentials. **None of those are implemented here.**
+- The AUT is a purposely simplified educational simulator with fictional demo users. Do not use real credentials or customer data.
+- This framework does **not** implement Okta integration, real SSO/OIDC token validation, authenticator-app TOTP, password spraying, or a full penetration-testing methodology.
+- The two Selenium scenarios prove a small set of browser journeys; extensive page-flow, accessibility and cross-browser coverage remain future opportunities.
+- The latest hosted demo UI can differ from the version checked out by CI. The **CI run is the reproducible test evidence**; the hosted link is for hands-on exploration, not the target of destructive security tests.
 
-## Interview walkthrough (2 minutes)
+## Suggested 2-minute interview walkthrough
 
-1. Open the RBAC parameterized test and explain 401 vs 403 and least privilege.
-2. Show the Selenium Page Object and demonstrate how a selector change affects one file rather than every test.
-3. Run `python -m pytest -m api -v` and explain fixture isolation.
-4. Open GitHub Actions and show the HTML/JUnit reports and automatic failure screenshots.
-5. Explain why account recovery tests run against isolated local demo instances rather than shared public users.
+1. Open the green GitHub Actions run and show the **21 passed** result and downloadable HTML report.
+2. Open `IdentityPage` and explain your Selenium Page Object Model and explicit waits.
+3. Show `testdata/rbac_cases.json` and one parameterized authorization test: explain `401` versus `403`.
+4. Open `conftest.py` and describe test isolation and why shared IAM accounts create flaky tests.
+5. Explain the CI debugging path: path configuration first, then a dropdown locator mismatch, followed by a clean green run.
 
-### Important limitations
-
-IdentityFlow is a deliberately simplified IAM simulator, not a production identity provider. These checks validate its observed contracts only; they are not a security certification or an Okta integration. The suite is a portfolio engineering demonstration, not a substitute for a formal IAM threat model or security assessment.
+This repository demonstrates QA automation design and execution, not just a list of test-case titles.
