@@ -1,0 +1,9 @@
+[
+  {"role": "viewer", "username": "alex.viewer", "resource": "projects", "expected_status": 200},
+  {"role": "viewer", "username": "alex.viewer", "resource": "users", "expected_status": 403},
+  {"role": "viewer", "username": "alex.viewer", "resource": "audit", "expected_status": 403},
+  {"role": "editor", "username": "sam.editor", "resource": "projects", "expected_status": 200},
+  {"role": "editor", "username": "sam.editor", "resource": "users", "expected_status": 403},
+  {"role": "admin", "username": "jordan.admin", "resource": "users", "expected_status": 200},
+  {"role": "admin", "username": "jordan.admin", "resource": "audit", "expected_status": 200}
+]
